@@ -26,7 +26,7 @@ RAG is everywhere in production:
 - **Healthcare** - Finding relevant research papers from massive databases
 - **Enterprise search** - Making internal wikis actually useful
 
-Basically anywhere you have too much text and not enough time.
+Basically anywhere you have too much text or data and not enough time.
 
 ## A Real Example I've encountered : The GitHub Docs Problem
 

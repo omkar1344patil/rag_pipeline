@@ -1,0 +1,35 @@
+# LangChain Core
+langchain>=1.0.0
+langchain-core>=0.3.0
+
+# Legacy Chains (required for LangChain 1.0+)
+langchain-classic>=0.1.0
+
+# Vector Store - Pinecone
+langchain-pinecone>=0.2.0
+pinecone-client>=3.0.0
+
+# Embeddings
+langchain-huggingface>=0.0.3
+sentence-transformers>=2.2.0
+
+# Local LLM - Ollama
+langchain-ollama>=0.1.0
+
+# Document Loaders
+langchain-community>=0.2.0
+pypdf>=3.0.0
+
+# Text Splitters
+langchain-text-splitters>=0.2.0
+
+# HTTP Requests (for Personal API)
+requests>=2.28.0
+
+# Utilities
+python-dotenv>=1.0.0
+
+# API Server
+fastapi>=0.100.0
+uvicorn>=0.23.0
+python-multipart>=0.0.6

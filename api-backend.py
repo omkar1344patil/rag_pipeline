@@ -101,6 +101,7 @@ def get_rag():
 # ============================================================================
 
 @app.get("/")
+@app.head("/")
 async def root():
     """Health check endpoint"""
     return {

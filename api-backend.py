@@ -71,6 +71,15 @@ app = FastAPI(
     version="1.0.0"
 )
 
+from logtail import LogtailHandler
+import logging
+
+handler = LogtailHandler(source_token="JmLTa5wqLxvbi8KEKToMLpkX")
+logging.basicConfig(handlers=[handler], level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+
+
 public_url = ngrok.connect(8000)
 print(f"Public URL: {public_url}")
 
@@ -126,6 +135,7 @@ async def configure(config: ConfigureRequest):
     - **api_key**: Required for personal_api mode
     """
     global rag_instance
+    logger.info("Someone accessed /configure")
     
     try:
         if config.mode == "personal_api":

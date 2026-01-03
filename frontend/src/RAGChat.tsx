@@ -3,7 +3,7 @@ import ReactMarkdown from "react-markdown";
 
 
 // const API_URL = "http://localhost:8000";
-const API_URL = "https://rag-pipeline-api-1s3z.onrender.com";
+const API_URL = "https://semiarid-talkatively-ji.ngrok-free.dev";
 
 interface Message {
   role: "user" | "assistant";

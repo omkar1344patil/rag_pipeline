@@ -2,7 +2,8 @@ import React, { useState, useRef, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 
 
-const API_URL = "http://localhost:8000";
+// const API_URL = "http://localhost:8000";
+const API_URL = "https://rag-pipeline-api-1s3z.onrender.com";
 
 interface Message {
   role: "user" | "assistant";

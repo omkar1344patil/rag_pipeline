@@ -113,6 +113,34 @@ export default function RAGChat() {
     setLoading(false);
   };
 
+  const uploadFiles = async (files: File[]) => {
+    setLoading(true);
+    const formData = new FormData();
+    const fileNames = files.map(f => f.name).join(", ");
+  
+    // Add all files to FormData
+    files.forEach(file => {
+      formData.append("files", file);
+    });
+  
+    try {
+      const res = await fetch(`${API_URL}/documents/upload`, {
+        method: "POST",
+        body: formData,
+      });
+      if (res.ok) {
+        setLoadedFile(fileNames);
+        setMessages([{ role: "assistant", content: `Ready! Ask me anything about: ${fileNames}` }]);
+        setShowDoc(false); // Hide doc viewer for multiple files
+      } else {
+        alert("Upload failed");
+      }
+    } catch (e) {
+      alert("Upload error");
+    }
+    setLoading(false);
+  };
+
   const clearFile = async () => {
     try {
       await fetch(`${API_URL}/documents/clear`, {
@@ -151,8 +179,8 @@ export default function RAGChat() {
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) uploadFile(file.name, file);
+    const files = Array.from(e.target.files || []);
+    if (files.length > 0) uploadFiles(files);
   };
 
   const saveSettings = () => {
@@ -255,7 +283,7 @@ export default function RAGChat() {
                   transition: "all 0.2s",
                 }}
               >
-                <input ref={fileInputRef} type="file" accept=".pdf,.txt,.csv" onChange={handleFileSelect} style={{ display: "none" }} />
+                <input ref={fileInputRef} type="file" accept=".pdf,.txt,.csv" multiple onChange={handleFileSelect} style={{ display: "none" }} />
                 <p style={{ margin: 0, color: dragOver ? "#4285f4" : "#555", fontWeight: 600, fontSize: 15 }}>
                   {loading ? "Uploading & Indexing..." : dragOver ? "Drop to upload!" : "Upload your own document"}
                 </p>

@@ -13,6 +13,8 @@ import os
 import tempfile
 import shutil
 from datetime import datetime
+from pyngrok import ngrok
+
 
 from rag_pipeline import PersonalAPIRAG, LocalRAG, BaseRAG
 
@@ -68,6 +70,9 @@ app = FastAPI(
     description="API for RAG (Retrieval-Augmented Generation) with Pinecone vector store",
     version="1.0.0"
 )
+
+public_url = ngrok.connect(8000)
+print(f"Public URL: {public_url}")
 
 # CORS middleware
 app.add_middleware(

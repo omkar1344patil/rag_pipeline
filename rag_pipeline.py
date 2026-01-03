@@ -332,7 +332,7 @@ if __name__ == "__main__":
         )
         
         # Load and index documents
-        docs = rag.load_documents(["grades.csv"])
+        docs = rag.load_documents(["/Users/omkar/Projects/rag_pipeline/frontend/public/grades.csv"])
         rag.create_vectorstore(docs)
         rag.setup_qa_chain(k=5)
         

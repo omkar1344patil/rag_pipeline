@@ -10,11 +10,8 @@ langchain-pinecone>=0.2.0
 pinecone-client>=3.0.0
 
 # Embeddings
-langchain-huggingface>=0.0.3
-sentence-transformers>=2.2.0
 
 # Local LLM - Ollama
-langchain-ollama>=0.1.0
 
 # Document Loaders
 langchain-community>=0.2.0

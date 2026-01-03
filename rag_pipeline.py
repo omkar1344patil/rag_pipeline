@@ -3,15 +3,15 @@ RAG Pipeline with Pinecone Vector Store
 Supports both Personal API (cloud-based LLMs) and Local LLM (Ollama) options.
 
 Required packages:
-    pip install langchain langchain-pinecone langchain-huggingface langchain-ollama langchain-community pinecone-client pypdf sentence-transformers requests
+    pip install langchain langchain-pinecone langchain-ollama langchain-community pinecone-client pypdf requests
 
 Environment variables:
     PERSONAL_API_KEY: API key for cloud LLM provider
     PINECONE_API_KEY: API key for Pinecone vector store
 """
 
-from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_pinecone import PineconeVectorStore
+from langchain_core.embeddings import Embeddings
 from langchain_ollama import OllamaLLM
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_classic.chains.combine_documents import create_stuff_documents_chain
@@ -81,6 +81,38 @@ class PersonalAPILLM(LLM):
         return result["choices"][0]["message"]["content"]
 
 
+class PineconeInferenceEmbeddings(Embeddings):
+    """Custom embeddings using Pinecone Inference API"""
+    
+    def __init__(self, pc: Pinecone, model: str = "multilingual-e5-large"):
+        self.pc = pc
+        self.model = model
+    
+    def embed_documents(self, texts: List[str]) -> List[List[float]]:
+        """Embed a list of documents using Pinecone inference"""
+        response = self.pc.inference.embed(
+            model=self.model,
+            inputs=texts,
+            parameters={
+                "input_type": "passage",
+                "truncate": "END"
+            }
+        )
+        return [item['values'] for item in response.data]
+    
+    def embed_query(self, text: str) -> List[float]:
+        """Embed a query using Pinecone inference"""
+        response = self.pc.inference.embed(
+            model=self.model,
+            inputs=[text],
+            parameters={
+                "input_type": "query",
+                "truncate": "END"
+            }
+        )
+        return response.data[0]['values']
+
+
 class BaseRAG:
     """Base class with shared RAG functionality"""
     
@@ -96,16 +128,16 @@ class BaseRAG:
         self.pc = None
         self.index = None
         
-        # Initialize embeddings
-        self.log("Loading embedding model...")
-        self.embeddings = HuggingFaceEmbeddings(
-            model_name="sentence-transformers/all-MiniLM-L6-v2",
-            model_kwargs={'device': 'cpu'}
-        )
-        self.log("✓ Embedding model loaded (384 dimensions)")
-        
-        # Initialize Pinecone
+        # Initialize Pinecone first (needed for embeddings)
         self._init_pinecone()
+        
+        # Initialize embeddings using Pinecone inference
+        self.log("Loading embedding model (Pinecone Inference API)...")
+        self.embeddings = PineconeInferenceEmbeddings(
+            pc=self.pc,
+            model="multilingual-e5-large"
+        )
+        self.log("✓ Embedding model configured (Pinecone Inference API)")
     
     def _init_pinecone(self):
         """Initialize Pinecone client and index"""

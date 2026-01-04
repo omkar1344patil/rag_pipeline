@@ -12,6 +12,7 @@ pinecone-client>=3.0.0
 # Embeddings
 
 # Local LLM - Ollama
+langchain-ollama>=0.1.0
 
 # Document Loaders
 langchain-community>=0.2.0

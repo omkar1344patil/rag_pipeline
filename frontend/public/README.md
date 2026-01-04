@@ -53,10 +53,18 @@ That's it. The rest is just engineering.
 ## Tech Stack
 
 - **Vector DB:** Pinecone
-- **Embeddings:** HuggingFace sentence-transformers
+- **Embeddings:** multilingual-e5-large
 - **Backend:** FastAPI + LangChain
 - **Frontend:** React + TypeScript
-- **LLMs:** OpenRouter API (Gemma, Llama, Mistral)
+- **LLMs:** OpenRouter APIs (this is a project otherwise would never use Openrouter for private data)
+
+## Is this the best RAG I could make?
+
+I'd say this is the most basic RAG I could come up with to showcase my RAG pipeline building skills. This can be improved 10x by adding :
+1. Hybrid search (semantic + keyword matching)
+2. Reranking the output chunks to find the bestcase considering the user query
+3. Multiple file support
+basically moving from "it works in production" to "it actually works reliably and proves it."
 
 ## Try it out
 

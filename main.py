@@ -2,7 +2,7 @@
 FastAPI Backend for RAG Pipeline
 Endpoints for document management, querying, and vector store operations.
 
-Run with: uvicorn api:app --reload --port 8000
+Run with: uvicorn main:app --reload --port 8000
 """
 
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form, BackgroundTasks
@@ -12,11 +12,17 @@ from typing import Optional, List
 import os
 import tempfile
 import shutil
+import logging
 from datetime import datetime
-from pyngrok import ngrok
-
 
 from rag_pipeline import PersonalAPIRAG, LocalRAG, BaseRAG
+
+# ============================================================================
+# Logging
+# ============================================================================
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # ============================================================================
 # Pydantic Models (Request/Response schemas)
@@ -71,22 +77,10 @@ app = FastAPI(
     version="1.0.0"
 )
 
-from logtail import LogtailHandler
-import logging
-
-handler = LogtailHandler(source_token="JmLTa5wqLxvbi8KEKToMLpkX")
-logging.basicConfig(handlers=[handler], level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-
-
-public_url = ngrok.connect(8000)
-print(f"Public URL: {public_url}")
-
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Configure appropriately for production
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -129,48 +123,48 @@ async def root():
 async def configure(config: ConfigureRequest):
     """
     Initialize/configure the RAG system.
-    
+
     - **mode**: 'personal_api' for cloud LLM or 'local' for Ollama
-    - **model_name**: Model to use (e.g., 'google/gemma-3-27b-it:free' or 'phi3:mini')
+    - **model_name**: Model to use (e.g., 'deepseek-chat' or 'phi3:mini')
     - **api_key**: Required for personal_api mode
     """
     global rag_instance
     logger.info("Someone accessed /configure")
-    
+
     try:
         if config.mode == "personal_api":
-            api_key = config.api_key or os.environ.get("PERSONAL_API_KEY")
+            api_key = config.api_key or os.environ.get("DEEPSEEK_API_KEY")
             if not api_key:
                 raise HTTPException(
                     status_code=400,
-                    detail="API key required for personal_api mode"
+                    detail="API key required for personal_api mode. Set DEEPSEEK_API_KEY env var."
                 )
-            
+
             rag_instance = PersonalAPIRAG(
-                model_name=config.model_name or "google/gemma-3-27b-it:free",
+                model_name=config.model_name or "deepseek-chat",
                 api_key=api_key,
-                api_base_url=config.api_base_url or "https://openrouter.ai/api/v1/chat/completions",
+                api_base_url=config.api_base_url or "https://api.deepseek.com/v1/chat/completions",
                 debug=True
             )
-            
+
         elif config.mode == "local":
             rag_instance = LocalRAG(
                 model_name=config.model_name or "phi3:mini",
                 debug=True
             )
-            
+
         else:
             raise HTTPException(
                 status_code=400,
                 detail=f"Invalid mode: {config.mode}. Use 'personal_api' or 'local'"
             )
-        
+
         return {
             "status": "success",
             "message": f"RAG initialized in {config.mode} mode",
-            "model": config.model_name or ("google/gemma-3-27b-it:free" if config.mode == "personal_api" else "phi3:mini")
+            "model": config.model_name or ("deepseek-chat" if config.mode == "personal_api" else "phi3:mini")
         }
-        
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -186,16 +180,16 @@ async def get_status():
             vector_count=0,
             index_name=BaseRAG.PINECONE_INDEX_NAME
         )
-    
+
     try:
         stats = rag_instance.get_index_stats()
         vector_count = stats.get("total_vector_count", 0)
     except:
         vector_count = 0
-    
+
     mode = "personal_api" if isinstance(rag_instance, PersonalAPIRAG) else "local"
     model_name = rag_instance.llm.model if hasattr(rag_instance.llm, 'model') else "unknown"
-    
+
     return StatusResponse(
         initialized=True,
         mode=mode,
@@ -214,7 +208,7 @@ async def upload_documents(
 ):
     """
     Upload and index documents.
-    
+
     - **files**: PDF or text files to upload
     - **chunk_size**: Size of text chunks (default: 1000)
     - **chunk_overlap**: Overlap between chunks (default: 200)
@@ -222,48 +216,42 @@ async def upload_documents(
     """
     rag = get_rag()
     start_time = datetime.now()
-    
+
     temp_dir = tempfile.mkdtemp()
     temp_files = []
-    
+
     try:
-        # Save uploaded files temporarily
         for file in files:
             temp_path = os.path.join(temp_dir, file.filename)
             with open(temp_path, "wb") as f:
                 content = await file.read()
                 f.write(content)
             temp_files.append(temp_path)
-        
-        # Load documents
+
         documents = rag.load_documents(temp_files)
-        
-        # Create vector store
+
         rag.create_vectorstore(
             documents,
             chunk_size=chunk_size,
             chunk_overlap=chunk_overlap,
             namespace=namespace
         )
-        
-        # Setup QA chain
+
         rag.setup_qa_chain(k=5)
-        
+
         processing_time = (datetime.now() - start_time).total_seconds()
-        
-        # Get chunk count from index stats
+
         stats = rag.get_index_stats()
         chunks_created = stats.get("total_vector_count", 0)
-        
+
         return UploadResponse(
             message="Documents uploaded and indexed successfully",
             documents_loaded=len(documents),
             chunks_created=chunks_created,
             processing_time=processing_time
         )
-        
+
     finally:
-        # Cleanup temp files
         shutil.rmtree(temp_dir, ignore_errors=True)
 
 
@@ -271,17 +259,17 @@ async def upload_documents(
 async def load_existing(namespace: str = ""):
     """
     Load existing vectors from Pinecone (skip re-indexing).
-    
+
     - **namespace**: Pinecone namespace to load from
     """
     rag = get_rag()
-    
+
     try:
         rag.load_existing_vectorstore(namespace=namespace)
         rag.setup_qa_chain(k=5)
-        
+
         stats = rag.get_index_stats()
-        
+
         return {
             "status": "success",
             "message": "Loaded existing vector store",
@@ -295,7 +283,7 @@ async def load_existing(namespace: str = ""):
 async def clear_documents(request: ClearRequest):
     """
     Clear vectors from Pinecone index.
-    
+
     - **namespace**: Specific namespace to clear (empty = all vectors)
     - **confirm**: Must be True to proceed
     """
@@ -304,11 +292,11 @@ async def clear_documents(request: ClearRequest):
             status_code=400,
             detail="Set 'confirm: true' to proceed with clearing"
         )
-    
+
     rag = get_rag()
-    
+
     success = rag.clear_vectorstore(namespace=request.namespace)
-    
+
     if success:
         return {
             "status": "success",
@@ -322,42 +310,40 @@ async def clear_documents(request: ClearRequest):
 async def query(request: QueryRequest):
     """
     Query the RAG system.
-    
+
     - **question**: Your question
     - **k**: Number of relevant documents to retrieve (default: 5)
     """
     rag = get_rag()
-    
+
     if rag.qa_chain is None:
         raise HTTPException(
             status_code=400,
             detail="QA chain not initialized. Upload documents first or call /documents/load-existing"
         )
-    
+
     start_time = datetime.now()
-    
+
     try:
-        # Update k if different from default
         if request.k != 5:
             rag.setup_qa_chain(k=request.k)
-        
+
         result = rag.query(request.question)
         processing_time = (datetime.now() - start_time).total_seconds()
-        
-        # Format sources
+
         sources = []
         for doc in result.get("sources", []):
             sources.append({
                 "content": doc.page_content[:500] + "..." if len(doc.page_content) > 500 else doc.page_content,
                 "metadata": doc.metadata
             })
-        
+
         return QueryResponse(
             answer=result["answer"],
             sources=sources,
             processing_time=processing_time
         )
-        
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -366,7 +352,7 @@ async def query(request: QueryRequest):
 async def get_index_stats():
     """Get Pinecone index statistics"""
     rag = get_rag()
-    
+
     try:
         stats = rag.get_index_stats()
         return {
@@ -382,10 +368,8 @@ async def get_available_models():
     """Get list of suggested models for each mode"""
     return {
         "personal_api": [
-            {"name": "google/gemma-3-27b-it:free", "description": "Free Gemma 3 27B"},
-            {"name": "meta-llama/llama-3.2-3b-instruct:free", "description": "Free Llama 3.2 3B"},
-            {"name": "mistralai/mistral-7b-instruct:free", "description": "Free Mistral 7B"},
-            {"name": "qwen/qwen-2-7b-instruct:free", "description": "Free Qwen 2 7B"},
+            {"name": "deepseek-chat", "description": "DeepSeek V3"},
+            {"name": "deepseek-reasoner", "description": "DeepSeek R1 (Reasoning)"},
         ],
         "local": [
             {"name": "phi3:mini", "description": "Microsoft Phi-3 Mini (3.8B)"},
@@ -397,7 +381,7 @@ async def get_available_models():
 
 
 # ============================================================================
-# Run with: uvicorn api:app --reload --port 8000
+# Run with: uvicorn main:app --reload --port 8000
 # ============================================================================
 
 if __name__ == "__main__":

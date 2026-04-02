@@ -8,7 +8,12 @@ Required packages:
 Environment variables:
     PERSONAL_API_KEY: API key for cloud LLM provider
     PINECONE_API_KEY: API key for Pinecone vector store
+
+    
 """
+
+PINECONE_API_KEY='pcsk_3EoXE9_6GmUz4Q7xq6NzibfawFCr2zbzvrK61KAWRMTtueckR3fJUM9jduTnMgugJwqeby'
+OPENROUTER_API_KEY='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'
 
 from langchain_pinecone import PineconeVectorStore
 from langchain_core.embeddings import Embeddings
@@ -141,7 +146,7 @@ class BaseRAG:
     
     def _init_pinecone(self):
         """Initialize Pinecone client and index"""
-        api_key = os.environ.get("PINECONE_API_KEY")
+        api_key = PINECONE_API_KEY
         if not api_key:
             raise ValueError("PINECONE_API_KEY environment variable required")
         
@@ -305,10 +310,10 @@ class PersonalAPIRAG(BaseRAG):
         self.log("=" * 60)
         
         if api_key is None:
-            api_key = os.environ.get("PERSONAL_API_KEY")
+            api_key = OPENROUTER_API_KEY
         
-        if not api_key:
-            raise ValueError("Personal API key required (set PERSONAL_API_KEY env var)")
+        # if not api_key:
+        #     raise ValueError("Personal API key required (set PERSONAL_API_KEY env var)")
         
         self.log(f"Connecting to LLM ({model_name})...")
         self.llm = PersonalAPILLM(
@@ -342,7 +347,7 @@ class LocalRAG(BaseRAG):
         self.llm = OllamaLLM(
             model=model_name,
             base_url=base_url,
-            temperature=0.3
+            temperature=0.1
         )
         
         self.log(f"✓ Ollama connected: {model_name}")
